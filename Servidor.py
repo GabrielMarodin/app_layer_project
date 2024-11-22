@@ -15,6 +15,29 @@ def unpack_message(mensagem):
         return porta, auth, tipo, creds, timestamp, nome
     else:
         print("Mensagem inválida")
+def register(creds,nome):
+    with open('users.txt', 'a') as f:
+        f.write(f"{creds}, {nome}, 1\n")
+
+def read_last_file_value(file):
+    try:
+        with open(file, 'r') as f:
+            lines = f.readlines()
+            if lines:
+                last_line = lines[-1].strip() 
+                user = last_line.split(',')
+                if len(user) != 3:
+                    print("linha mal formatada")
+                    return None
+                else:
+                    creds, nome, porta = user
+                    return creds, nome, porta
+            else:
+                print("Registro vazio")
+                return None
+    except FileNotFoundError:
+        print(f"Arquivo {file} não existe.")
+        return None
 
 ######init#####
 host = '127.0.0.1'
@@ -33,11 +56,11 @@ while True:
         porta, auth, tipo, creds, timestamp, nome = unpack_message(mensagem)
         data = datetime.fromtimestamp(timestamp)
 
-        print(f"porta: {porta}")
-        print(f"auth: {auth}")
-        print(f"tipo: {tipo}")
-        print(f"creds: {creds}")
-        print(f"data: {data}")
-        print(f"nome: {nome}")
+        if tipo == 2:
+            last = read_last_file_value('users.txt')
+            if last == None:
+                register(1000,nome)
+            else: 
+                register((int(last[0])+1),nome)
     finally:
         conn.close()
