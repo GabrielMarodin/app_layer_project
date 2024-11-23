@@ -1,3 +1,2 @@
 packing_test.py
-users.txt
-log.txt
+*.txt
