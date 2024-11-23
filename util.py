@@ -2,7 +2,7 @@ import struct
 import datetime
 import threading
 
-file_lock = threading.lock()
+file_lock = threading.Lock()
 #####funções auxiliares#####
 
 def get_time():
@@ -22,16 +22,15 @@ def pack_message(porta, auth, tipo, creds, nome):
     timestamp = int(datetime.datetime.now().timestamp())
 
     porta = porta & 0xF
-    auth = auth & 0x3  
-    tipo = tipo & 0x3   
+    auth = auth & 0b11
+    tipo = tipo & 0b11  
     creds = creds & 0xFFFF
     nome = nome.encode('utf-8')[:50]
     nome = nome.ljust(50, b'\x00')
 
     mensagem = bytearray(60)
 
-    packed_header = (porta << 6) | (auth << 4) | (tipo << 2)
-
+    packed_header = (porta << 4) | (auth << 2) | tipo
     mensagem[0] = packed_header
     mensagem[1:3] = struct.pack('>H', creds)
     mensagem[3:10] = struct.pack('>Q', timestamp)[1:]
@@ -42,9 +41,9 @@ def pack_message(porta, auth, tipo, creds, nome):
 def unpack_message(mensagem):
 
     if len(mensagem) == 60:
-        porta = (mensagem[0] >> 6) & 0xF
-        auth = (mensagem[0] >> 4) & 0x3
-        tipo = (mensagem[0] >> 2) & 0x3
+        porta = (mensagem[0] >> 4) & 0xF
+        auth = (mensagem[0] >> 2) & 0b11
+        tipo = (mensagem[0]) & 0b11
         creds = struct.unpack('>H', mensagem[1:3])[0]
         timestamp = struct.unpack('>Q', b'\x00' + mensagem[3:10])[0]
         nome = mensagem[10:60].decode('utf-8', errors='ignore').rstrip('\x00')
@@ -59,6 +58,23 @@ def send_message(socket, porta, auth, tipo, credenciais, username):
 
     socket.sendall(mensagem)
 
+def receive_message(socket):
+    try:
+        mensagem = socket.recv(60)
+        if not mensagem:
+            raise ConnectionError('Conexão abortada')
+        porta, auth, tipo, creds, timestamp, nome = unpack_message(mensagem)
+        return porta, auth, tipo, creds, timestamp, nome
+    except ConnectionError as e:
+        print(f'Erro de conexão: {e}')
+        return None
+    except OSError as e:
+        print(f"Erro de socket: {e}")
+        return None
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
+        return None
+    
 def loggar(datatempo,porta,credencial,status):
     with file_lock:
         try:
@@ -71,79 +87,71 @@ def loggar(datatempo,porta,credencial,status):
             return None       
 
 def login(credencial, nome, timestamp, porta):
-    read = read_file('users.txt')
     datatempo = datetime.datetime.fromtimestamp(timestamp)
 
     try:
-        data, length = read
-
-    except TypeError:
-        print('registro vazio')
+        data = read_file('users.txt')
+        if data is None:
+            status = 'negado'
+            auth = False
+            return auth
+    except ValueError:
         status = 'negado'
         auth = False
-    
     else:
-       
-        i = 0
+        for i in range(len(data)):
+            try:
+                fcredencial, fnome, fporta = data[i].split(',')
+            except ValueError as e:
+                print(e)
+                continue
+            else:
+                if nome == fnome and int(credencial) == int(fcredencial):
+                    if int(fporta) >= porta:
+                        print('logado corretamente')
+                        status = 'autorizado'
+                        auth = True
+                    else:
+                        print('nivel insuficiente')
+                        status = 'negado'
+                        auth = False
+                    break
 
-        while i < length:
-            fcredencial, fnome, fporta = data[i].split(',')
-
-            if nome == fnome and int(credencial) == int(fcredencial):
-                if int(fporta) >= porta:
-                    print('logado corretamente')
-                    status = 'autorizado'
-                    auth = True
-                
-                else:
-                    print('nivel insuficiente')
-                    status = 'negado'
-                    auth = False
-                break
-            i = i + 1
-
-        if i == length:
+        if i == len(data):
             print('não registrado')
             status = 'negado'
             auth = False
 
     loggar(datatempo, porta, credencial, status)
-    return status, auth
+    return auth
 
 def register(nome):
-    read = read_file('users.txt')
+    
+    data = read_file('users.txt')
 
-    try:
-        data, length = read
-        
-    except TypeError:
+    if data is None:
         data = f'1000,{nome},1\n'
         write_file('users.txt',data)
-        return 'registrado', 1, 1000
+        return 1, 1000
     
-    else:
-        i = 0
+    for i in range(len(data)):
+        fcredencial, fnome, fporta = data[i].split(',')
 
-        while i < length:
-            fcredencial, fnome, fporta = data[i].split(',')
+        if nome == fnome:
+            porta = int(fporta) + 1
+            credencial = fcredencial
+            data[i] = f'{credencial},{fnome},{porta}\n'
+            print('Register: escalamento')
+            break
+    
+    if i == (len(data)-1):
+        credencial = int(fcredencial) + 1
+        porta = 1
+        data.insert(i,f'{credencial},{nome},{porta}\n')
+        print('Register: Novo registro')
 
-            if nome == fnome:
-                porta = int(fporta) + 1
-                data[i] = f'{fcredencial},{fnome},{porta}\n'
-                estado = 'escalado'
-                credencial = fcredencial
-
-            i = i + 1
-        
-        if i == length:
-            fcredencial, fnome, fporta = data[(i-1)].split(',')
-            credencial = int(fcredencial) + 1
-            data.insert(i,f'{credencial},{nome},1\n')
-            estado = 'registrado'
-            porta = 1
-
-        write_file('users.txt',data)
-        return estado, porta, credencial
+    write_file('users.txt',data)
+    return porta, credencial
 
 def read_file(file):
     with file_lock:
@@ -152,8 +160,7 @@ def read_file(file):
                 lines = f.readlines()
 
                 if lines:
-                    length = len(lines)
-                    return lines, length
+                    return lines
                 else:
                     print("Registro vazio")
                     return None
@@ -170,3 +177,25 @@ def write_file(file,data):
         except FileNotFoundError:
             print(f"Arquivo {file} não existe.")
             return None
+
+def client_handling(socket_cliente,socket_servidor):
+
+    while True:
+        mensagem = receive_message(socket_cliente)
+
+        if mensagem is None:
+            print('cliente não respondeu')
+            break
+
+        porta, auth, tipo, creds, timestamp, nome = mensagem
+        
+        if tipo == 1:
+            auth = login(creds, nome, timestamp, porta)
+            send_message(socket_cliente, porta, auth, tipo, creds, nome)
+        elif tipo == 2:
+            porta, creds = register(nome)
+            send_message(socket_cliente, porta, True, tipo, int(creds), nome)
+        else:
+            send_message(socket_cliente, porta, True, tipo, creds, nome)
+            socket_cliente.close()
+    socket_cliente.close()
