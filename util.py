@@ -48,9 +48,17 @@ def unpack_message(mensagem):
         timestamp = struct.unpack('>Q', b'\x00' + mensagem[3:10])[0]
         nome = mensagem[10:60].decode('utf-8', errors='ignore').rstrip('\x00')
 
-        return porta, auth, tipo, creds, timestamp, nome
+        return {
+            "tipo": tipo,
+            "porta": porta,
+            "credencial": creds,
+            "timestamp": timestamp,
+            "nome": nome,
+            "autorização": auth,
+        }
     else:
         print("Mensagem inválida")
+        return None
 
 def send_message(socket, porta, auth, tipo, credenciais, username):
     
@@ -63,8 +71,8 @@ def receive_message(socket):
         mensagem = socket.recv(60)
         if not mensagem:
             raise ConnectionError('Conexão abortada')
-        porta, auth, tipo, creds, timestamp, nome = unpack_message(mensagem)
-        return porta, auth, tipo, creds, timestamp, nome
+        dados = unpack_message(mensagem)
+        return dados
     except ConnectionError as e:
         print(f'Erro de conexão: {e}')
         return None
@@ -81,10 +89,9 @@ def loggar(datatempo,porta,credencial,status):
             with open('log.txt','a') as f:
                 data = f'{datatempo}, p{porta}, {credencial}, {status}\n'
                 f.write(data)
-
         except FileNotFoundError:
             print(f"Arquivo log.txt não encontrado.")
-            return None       
+            return None
 
 def login(credencial, nome, timestamp, porta):
     datatempo = datetime.datetime.fromtimestamp(timestamp)
@@ -116,8 +123,7 @@ def login(credencial, nome, timestamp, porta):
                         status = 'negado'
                         auth = False
                     break
-
-        if i == len(data):
+        else:
             print('não registrado')
             status = 'negado'
             auth = False
@@ -125,33 +131,39 @@ def login(credencial, nome, timestamp, porta):
     loggar(datatempo, porta, credencial, status)
     return auth
 
-def register(nome):
+def register(nome, porta):
     
     data = read_file('users.txt')
 
     if data is None:
         data = f'1000,{nome},1\n'
         write_file('users.txt',data)
-        return 1, 1000
+        return 1, 1000, True
     
     for i in range(len(data)):
         fcredencial, fnome, fporta = data[i].split(',')
 
         if nome == fnome:
-            porta = int(fporta) + 1
-            credencial = fcredencial
-            data[i] = f'{credencial},{fnome},{porta}\n'
-            print('Register: escalamento')
-            break
-    
-    if i == (len(data)-1):
+            if int(fporta) >= porta:
+                print('nivel do usuario igual ou superior a porta')
+                credencial = fcredencial
+                auth = False
+                break
+            else:
+                credencial = fcredencial
+                data[i] = f'{credencial},{fnome},{porta}\n'
+                print('Register: escalamento')
+                auth = True
+                break
+    else:
         credencial = int(fcredencial) + 1
         porta = 1
-        data.insert(i,f'{credencial},{nome},{porta}\n')
+        data.insert((i+1),f'{credencial},{nome},{porta}\n')
         print('Register: Novo registro')
+        auth = True
 
     write_file('users.txt',data)
-    return porta, credencial
+    return porta, credencial, auth
 
 def read_file(file):
     with file_lock:
@@ -181,21 +193,25 @@ def write_file(file,data):
 def client_handling(socket_cliente,socket_servidor):
 
     while True:
-        mensagem = receive_message(socket_cliente)
+        dados = receive_message(socket_cliente)
 
-        if mensagem is None:
+        if dados is None:
             print('cliente não respondeu')
             break
 
-        porta, auth, tipo, creds, timestamp, nome = mensagem
+        porta = dados['porta']
+        nome = dados['nome']
+        timestamp = dados['timestamp']
+        cred = dados['credencial']
+        tipo = dados['tipo']
         
         if tipo == 1:
-            auth = login(creds, nome, timestamp, porta)
-            send_message(socket_cliente, porta, auth, tipo, creds, nome)
+            auth = login(cred, nome, timestamp, porta)
+            send_message(socket_cliente, porta, auth, tipo, cred, nome)
         elif tipo == 2:
-            porta, creds = register(nome)
-            send_message(socket_cliente, porta, True, tipo, int(creds), nome)
+            porta, cred, auth = register(nome,porta)
+            send_message(socket_cliente, porta, auth, tipo, int(cred), nome)
         else:
-            send_message(socket_cliente, porta, True, tipo, creds, nome)
+            send_message(socket_cliente, porta, True, tipo, cred, nome)
             socket_cliente.close()
     socket_cliente.close()

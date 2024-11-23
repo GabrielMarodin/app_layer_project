@@ -21,10 +21,14 @@ socket_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_cliente.connect(addr)
 porta = 1
 credenciais = 0
+auth = 0
 
 #####Main Loop#####
 while True:
-    auth = 0
+    if porta > 5:
+        socket_cliente.close()
+        break
+
     print(f"bem-vindo a porta {porta}\n")
 
     while True:
@@ -38,29 +42,38 @@ while True:
         username = input("digite seu nome de usuário: ")
         credenciais = int(input("Digite sua credencial: "))
         send_message(socket_cliente, porta, auth, tipo, credenciais, username)
-        mensagem = receive_message(socket_cliente)
+        dados = receive_message(socket_cliente)
 
-        if mensagem is None:
-            print('servidor não respondeu')
-        else:
-            porta, auth, tipo, creds, timestamp, nome = mensagem
+        if dados is None:
+            print('Mensagem inválida')
+            break
+        
+        porta = dados['porta']
+        auth = dados['autorização']
 
-        if auth == 1:
-            porta = porta + 1
+        if auth:
+            porta = (porta + 1)
             print('acesso cedido')
         else:
             print('acesso negado')
-
     elif tipo == 2:
         username = input("digite seu nome de usuário: ")
         send_message(socket_cliente, porta, auth, tipo, credenciais, username)
-        mensagem = receive_message(socket_cliente)
+        dados = receive_message(socket_cliente)
 
-        if mensagem is None:
-            print('servidor não respondeu')
+        if dados is None:
+            print('Mensagem inválida')
+            break
+        
+        nome = dados['nome']
+        creds = dados['credencial']
+        auth = dados['autorização']
+
+        if auth:
+            print(f'Seu nome: {nome}; Sua credencial: {creds}')
         else:
-            porta, auth, tipo, creds, timestamp, nome = mensagem
-            print(f'Seu nome: {nome}, sua credencial: {creds}')
+            print(f'erro de cadastro')
+        
 
 
 
