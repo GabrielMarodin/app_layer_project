@@ -1,5 +1,8 @@
 import struct
 import datetime
+import threading
+
+file_lock = threading.lock()
 #####funções auxiliares#####
 
 def get_time():
@@ -57,14 +60,15 @@ def send_message(socket, porta, auth, tipo, credenciais, username):
     socket.sendall(mensagem)
 
 def loggar(datatempo,porta,credencial,status):
-    try:
-        with open('log.txt','a') as f:
-            data = f'{datatempo}, p{porta}, {credencial}, {status}\n'
-            f.write(data)
+    with file_lock:
+        try:
+            with open('log.txt','a') as f:
+                data = f'{datatempo}, p{porta}, {credencial}, {status}\n'
+                f.write(data)
 
-    except FileNotFoundError:
-        print(f"Arquivo log.txt não encontrado.")
-        return None       
+        except FileNotFoundError:
+            print(f"Arquivo log.txt não encontrado.")
+            return None       
 
 def login(credencial, nome, timestamp, porta):
     read = read_file('users.txt')
@@ -142,26 +146,27 @@ def register(nome):
         return estado, porta, credencial
 
 def read_file(file):
+    with file_lock:
+        try:
+            with open(file, 'r') as f:
+                lines = f.readlines()
 
-    try:
-        with open(file, 'r') as f:
-            lines = f.readlines()
-
-            if lines:
-                length = len(lines)
-                return lines, length
-            else:
-                print("Registro vazio")
-                return None
-            
-    except FileNotFoundError:
-        print(f"Arquivo {file} não existe.")
-        return None
+                if lines:
+                    length = len(lines)
+                    return lines, length
+                else:
+                    print("Registro vazio")
+                    return None
+                
+        except FileNotFoundError:
+            print(f"Arquivo {file} não existe.")
+            return None
 
 def write_file(file,data):
-    try:
-        with open(file, 'w') as f:
-            f.writelines(data)
-    except FileNotFoundError:
-        print(f"Arquivo {file} não existe.")
-        return None
+    with file_lock:
+        try:
+            with open(file, 'w') as f:
+                f.writelines(data)
+        except FileNotFoundError:
+            print(f"Arquivo {file} não existe.")
+            return None

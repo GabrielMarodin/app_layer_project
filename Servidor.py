@@ -1,23 +1,18 @@
 import socket
+import threading
 from util import login
 from util import unpack_message
 from util import register
 from util import send_message
 
-######init#####
-host = '127.0.0.1'
-port = 49152
-addr = (host,port)
-socket_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-socket_servidor.bind(addr)
-socket_servidor.listen()
+def client_handling(socket_cliente):
 
-while True:
-    print ('aguardando conexao')
-    conn, cliente = socket_servidor.accept() #espera por conexão
-    print ('conectado')
-    try:
-        mensagem = conn.recv(60)
+    while True:
+        mensagem = socket_cliente.recv(60)
+
+        if not mensagem:
+            break
+
         porta, auth, tipo, creds, timestamp, nome = unpack_message(mensagem)
         
         if tipo == 1:
@@ -29,7 +24,22 @@ while True:
                 #send_message(socket_servidor, porta, True, tipo, creds, nome)
             else:
                 #send_message(socket_servidor, porta, True, tipo, creds, nome)
-                socket_servidor.close()
-        
-    finally:
-        conn.close()
+                socket_cliente.close()
+
+    socket_cliente.close()
+
+######init#####
+host = '127.0.0.1'
+port = 49152
+socket_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+socket_servidor.bind((host,port))
+socket_servidor.listen(10)
+
+print ('aguardando conexao')
+
+while True:
+    socket_cliente, cliente = socket_servidor.accept() #espera por conexão
+    print ('conectado')
+
+    thread_cliente = threading.Thread(target = client_handling,args=(socket_cliente))
+    thread_cliente.start()
