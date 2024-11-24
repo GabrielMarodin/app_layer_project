@@ -27,15 +27,16 @@ Funcionamento:
 
 Estrutura da mensagem:
 
-tamanho: 60 bytes
-       primeiro_byte { 
-         porta: 4 bits,
-         autorização: 2 bits,
-         tipo: 2 bits,
-       }
-       credenciais: 2 bytes
-       datatempo: 7 bytes
-       nome: 50 bytes
+tamanho: 60 bytes  
+
+primeiro_byte {  
+  porta: 4 bits,  
+  autorização: 2 bits,  
+  tipo: 2 bits,  
+}  
+credenciais: 2 bytes  
+datatempo: 7 bytes  
+nome: 50 bytes  
 
 Rotinas do servidor:
 
