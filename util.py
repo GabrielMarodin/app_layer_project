@@ -157,7 +157,6 @@ def register(nome, porta):
                 break
     else:
         credencial = int(fcredencial) + 1
-        porta = 1
         data.insert((i+1),f'{credencial},{nome},{porta}\n')
         print('Register: Novo registro')
         auth = True
@@ -196,7 +195,9 @@ def client_handling(socket_cliente,socket_servidor):
         dados = receive_message(socket_cliente)
 
         if dados is None:
-            print('cliente não respondeu')
+            break
+        elif dados['nome'] == '500':
+            print('Usuário desconectado')
             break
 
         porta = dados['porta']
@@ -207,11 +208,12 @@ def client_handling(socket_cliente,socket_servidor):
         
         if tipo == 1:
             auth = login(cred, nome, timestamp, porta)
-            send_message(socket_cliente, porta, auth, tipo, cred, nome)
         elif tipo == 2:
             porta, cred, auth = register(nome,porta)
-            send_message(socket_cliente, porta, auth, tipo, int(cred), nome)
         else:
-            send_message(socket_cliente, porta, True, tipo, cred, nome)
+            print('Fora de alcance')
             socket_cliente.close()
+            break
+        send_message(socket_cliente, porta, auth, tipo, int(cred), nome)
+        
     socket_cliente.close()

@@ -1,4 +1,5 @@
 import socket 
+import sys
 from util import send_message
 from util import receive_message
 
@@ -14,19 +15,22 @@ from util import receive_message
 ############################
 
 ######init#####
-ip = '127.0.0.1' #localhost - endereço IP do meu próprio computador
+ip = '127.0.0.1' #localhost
 port = 49152
 addr = (ip,port)
 socket_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 socket_cliente.connect(addr)
-porta = 1
+if len(sys.argv)>1:
+    porta = int(sys.argv[1])
+else:
+    porta = 1
 credenciais = 0
 auth = 0
 
 #####Main Loop#####
 while True:
+
     if porta > 5:
-        socket_cliente.close()
         break
 
     print(f"bem-vindo a porta {porta}\n")
@@ -34,26 +38,35 @@ while True:
     while True:
         try:
             tipo = int(input("Digite 1 para entrar e 2 para cadastrar: "))
-            break
+            if tipo == 1 or tipo == 2:
+                break
+            else:
+                print('Entrada inválida tente de novo.')
         except ValueError:
-                print("Entrada inválida tente de novo.\n")
+                print('Entrada inválida tente de novo.')
 
     if tipo == 1:
-        username = input("digite seu nome de usuário: ")
+        while True:
+            username = input("digite seu nome de usuário: ")
+            if any(char.isdigit() for char in username):
+                print('Nome não pode conter números')
+            else:
+                break
+            
         credenciais = int(input("Digite sua credencial: "))
         send_message(socket_cliente, porta, auth, tipo, credenciais, username)
         dados = receive_message(socket_cliente)
 
         if dados is None:
-            print('Mensagem inválida')
-            break
+            print('Mensagem do servidor inválida')
+            continue
         
         porta = dados['porta']
         auth = dados['autorização']
 
         if auth:
-            porta = (porta + 1)
-            print('acesso cedido')
+            print(f'acesso cedido a porta {porta}')
+            break
         else:
             print('acesso negado')
     elif tipo == 2:
@@ -62,18 +75,21 @@ while True:
         dados = receive_message(socket_cliente)
 
         if dados is None:
-            print('Mensagem inválida')
-            break
+            print('Mensagem do servidor inválida')
+            continue
         
         nome = dados['nome']
         creds = dados['credencial']
         auth = dados['autorização']
 
         if auth:
+            print('Cadastro bem sucedido')
             print(f'Seu nome: {nome}; Sua credencial: {creds}')
         else:
-            print(f'erro de cadastro')
-        
+            print('Erro de cadastro')
+
+send_message(socket_cliente, porta, auth, tipo, credenciais, '500')
+socket_cliente.close()
 
 
 
