@@ -19,5 +19,5 @@ while True:
     socket_cliente, cliente = socket_servidor.accept() #espera por conexão
     print ('conectado')
 
-    thread_cliente = threading.Thread(target = client_handling,args=(socket_cliente,socket_servidor))
+    thread_cliente = threading.Thread(target = client_handling,args=(socket_cliente))
     thread_cliente.start()

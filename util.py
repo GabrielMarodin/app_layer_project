@@ -157,9 +157,13 @@ def register(nome, porta):
                 break
     else:
         credencial = int(fcredencial) + 1
-        data.insert((i+1),f'{credencial},{nome},{porta}\n')
-        print('Register: Novo registro')
-        auth = True
+        if credencial > 9999:
+            print('Limite de usuários atingido')
+            auth = False
+        else:
+            data.insert((i+1),f'{credencial},{nome},{porta}\n')
+            print('Register: Novo registro')
+            auth = True
 
     write_file('users.txt',data)
     return porta, credencial, auth
@@ -189,7 +193,7 @@ def write_file(file,data):
             print(f"Arquivo {file} não existe.")
             return None
 
-def client_handling(socket_cliente,socket_servidor):
+def client_handling(socket_cliente):
 
     while True:
         dados = receive_message(socket_cliente)
