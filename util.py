@@ -145,7 +145,7 @@ def register(nome, porta):
 
         if nome == fnome:
             if int(fporta) >= porta:
-                print('nivel do usuario igual ou superior a porta')
+                print('Nivel do usuario igual ou superior a porta')
                 credencial = fcredencial
                 auth = False
                 break
@@ -196,24 +196,25 @@ def client_handling(socket_cliente,socket_servidor):
 
         if dados is None:
             break
-        elif dados['nome'] == '500':
-            print('Usuário desconectado')
+        elif dados['credencial'] == 500:
+            print('Cliente desconectado')
             break
 
         porta = dados['porta']
         nome = dados['nome']
         timestamp = dados['timestamp']
-        cred = dados['credencial']
+        credencial = dados['credencial']
         tipo = dados['tipo']
         
         if tipo == 1:
-            auth = login(cred, nome, timestamp, porta)
+            auth = login(credencial, nome, timestamp, porta)
         elif tipo == 2:
-            porta, cred, auth = register(nome,porta)
+            porta, credencial, auth = register(nome,porta)
         else:
             print('Fora de alcance')
             socket_cliente.close()
             break
-        send_message(socket_cliente, porta, auth, tipo, int(cred), nome)
+
+        send_message(socket_cliente, porta, auth, tipo, int(credencial), nome)
         
     socket_cliente.close()
