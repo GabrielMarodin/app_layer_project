@@ -6,24 +6,24 @@ Programa cliente-servidor para controle de acesso.
 
 Funcionamento:
 
-1- Servidor é aberto executando Servidor.py;
-2- Servidor aguarda conexão;
-3- Cliente é aberto executando Cliente.py [porta] (se nemhum argumento for passado utiliza a porta 1);
-4- Cliente estabelece conexão;
-5- Servidor entra no loop de handling do cliente onde aguarda uma mensagem;
-6- Usuário interage com o terminal;
-7- Cliente empacota mensagem;
-8- Cliente envia mensagem;
-10- Cliente espera resposta;
-11- Servidor recebe mensagem;
-12- Servidor desempacota mensagem;
-13- Servidor executa a rotina referente ao tipo de mensagem;
-14- Servidor enpacota mensage;
-15- Servidor envia mensagem;
-16- Servidor volta a esperar recebimento de mensagem;
-17- Cliente recebe mensagem e desempacota ela;
-18- Cliente mostra resposta correspondente ao usuário;
-19- Cliente volta ao começo do loop em (6)
+1- Servidor é aberto executando Servidor.py;  
+2- Servidor aguarda conexão;  
+3- Cliente é aberto executando Cliente.py [porta] (se nenhum argumento for passado utiliza a porta 1);  
+4- Cliente estabelece conexão;  
+5- Servidor entra no loop de handling do cliente onde aguarda uma mensagem;  
+6- Usuário interage com o terminal;  
+7- Cliente empacota mensagem;  
+8- Cliente envia mensagem;  
+10- Cliente espera resposta;  
+11- Servidor recebe mensagem;  
+12- Servidor desempacota mensagem;  
+13- Servidor executa a rotina referente ao tipo de mensagem;  
+14- Servidor enpacota mensage;  
+15- Servidor envia mensagem;  
+16- Servidor volta a esperar recebimento de mensagem;  
+17- Cliente recebe mensagem e desempacota ela;  
+18- Cliente mostra resposta correspondente ao usuário;  
+19- Cliente volta ao começo do loop em (6)  
 
 Estrutura da mensagem:
 
